@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Messwerte">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1117">
+<meta name="description" content="Messwerteauswertung für den Physikunterricht – iPad-optimiert">
+<link rel="manifest" href="data:application/json,{
+  &quot;name&quot;:&quot;Messwerteauswertung&quot;,
+  &quot;short_name&quot;:&quot;Messwerte&quot;,
+  &quot;description&quot;:&quot;Messwerteauswertung Physik – iPad&quot;,
+  &quot;start_url&quot;:&quot;/messwerte/Messwerteauswertung.html&quot;,
+  &quot;scope&quot;:&quot;/messwerte/&quot;,
+  &quot;display&quot;:&quot;standalone&quot;,
+  &quot;orientation&quot;:&quot;landscape&quot;,
+  &quot;background_color&quot;:&quot;%230f1117&quot;,
+  &quot;theme_color&quot;:&quot;%230f1117&quot;,
+  &quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1117'/%3E%3Cpolyline points='60,400 140,280 220,320 300,180 380,240 450,100' fill='none' stroke='%234fd1c5' stroke-width='28' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='140' cy='280' r='22' fill='%23f6ad55'/%3E%3Ccircle cx='220' cy='320' r='22' fill='%23f6ad55'/%3E%3Ccircle cx='300' cy='180' r='22' fill='%23f6ad55'/%3E%3Ccircle cx='380' cy='240' r='22' fill='%23f6ad55'/%3E%3C/svg%3E&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]
+}">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230f1117'/%3E%3Cpolyline points='60,400 140,280 220,320 300,180 380,240 450,100' fill='none' stroke='%234fd1c5' stroke-width='28' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='140' cy='280' r='22' fill='%23f6ad55'/%3E%3Ccircle cx='220' cy='320' r='22' fill='%23f6ad55'/%3E%3Ccircle cx='300' cy='180' r='22' fill='%23f6ad55'/%3E%3Ccircle cx='380' cy='240' r='22' fill='%23f6ad55'/%3E%3C/svg%3E">
+<title>Messwerteauswertung</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1117;--panel:#181c27;--border:#252a3a;
+    --accent:#4fd1c5;--accent2:#f6ad55;--accent3:#fc8181;--accent4:#90cdf4;
+    --text:#e2e8f0;--muted:#718096;--green:#68d391;
+    --touch:48px; --touch-sm:40px;
+    --font-mono: ui-monospace, 'SF Mono', 'Menlo', 'Courier New', monospace;
+    --font-sans: ui-rounded, -apple-system, 'SF Pro Rounded', 'Helvetica Neue', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-sans);
+    touch-action:manipulation; /* prevent double-tap zoom */}
+
+  /* ── HEADER ── */
+  header{background:linear-gradient(135deg,#1a2035,#0f1117);border-bottom:1px solid var(--border);
+    padding:10px 16px;display:flex;align-items:center;justify-content:space-between;
+    height:54px;flex-shrink:0;}
+  .logo{font-size:18px;font-weight:800;color:var(--accent);}
+  .logo span{color:var(--text);}
+  .logo-sub{font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:.8px;}
+  .export-bar{display:flex;gap:6px;}
+  .exp-btn{height:var(--touch-sm);padding:0 14px;border-radius:8px;border:1px solid var(--border);
+    background:#1e2436;color:var(--text);font-family:var(--font-sans);font-size:13px;
+    font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;}
+  .exp-btn.imp{border-color:var(--accent);color:var(--accent);}
+  .exp-btn:active{opacity:.7;}
+
+  /* ── TABS (bottom nav on tablet) ── */
+  .tab-bar{display:flex;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;}
+  .tab{flex:1;height:var(--touch-sm);display:flex;align-items:center;justify-content:center;gap:6px;
+    font-family:var(--font-mono);font-size:11px;color:var(--muted);
+    cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(79,209,197,.05);}
+  .tab svg{width:16px;height:16px;}
+
+  /* ── LAYOUT ── */
+  .main{display:flex;height:calc(100vh - 54px - 42px);overflow:hidden;}
+
+  /* Panels – hidden by default, shown when .active */
+  .panel{display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    width:100%;flex-shrink:0;}
+  .panel.active{display:flex;}
+
+  /* ── LANDSCAPE: Modell + Diagramm always side by side ── */
+  @media (orientation:landscape) and (min-width:700px){
+    .main{flex-direction:row;}
+
+    /* Modell panel: always visible, fixed width */
+    #pModel{
+      display:flex !important;
+      width:400px;
+      flex-shrink:0;
+      border-right:2px solid var(--border);
+    }
+    /* Chart panel: always visible, takes remaining space */
+    #pChart{
+      display:flex !important;
+      flex:1;
+      min-width:0;
+    }
+    /* Data panel: hidden unless toggled as slide-over */
+    #pData{display:none !important;}
+    body.data-open #pData{
+      display:flex !important;
+      position:fixed;
+      top:96px; /* header + tabbar */
+      left:0;
+      bottom:0;
+      width:min(440px, 80vw);
+      z-index:60;
+      background:var(--panel);
+      border-right:2px solid var(--border);
+      box-shadow:12px 0 48px rgba(0,0,0,.6);
+    }
+    /* Scrim behind data slide-over */
+    body.data-open .data-scrim{display:block;}
+
+    /* Tab bar: only show Daten tab in landscape */
+    #tabModel,#tabChart{display:none;}
+    #tabData{display:flex;}
+    .tab-bar{justify-content:flex-start;padding:0 16px;}
+    /* Style the Daten tab as a toggle button in landscape */
+    #tabData.active{color:var(--accent2);border-bottom-color:var(--accent2);}
+  }
+
+  /* ── SECTIONS ── */
+  .section{border-bottom:1px solid var(--border);padding:14px 16px;}
+  .section-title{font-size:10px;font-family:var(--font-mono);letter-spacing:2px;
+    text-transform:uppercase;color:var(--accent);margin-bottom:10px;
+    display:flex;align-items:center;gap:8px;}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* ── INPUTS – large touch targets ── */
+  input[type="text"],input[type="number"],select{
+    width:100%;background:#0d101a;border:1px solid var(--border);border-radius:8px;
+    color:var(--text);font-family:var(--font-mono);
+    font-size:15px;padding:10px 12px;outline:none;transition:border-color .2s;
+    -webkit-appearance:none; /* iOS styling */
+  }
+  input:focus,select:focus{border-color:var(--accent);}
+  input[type="checkbox"]{width:20px;height:20px;accent-color:var(--accent);flex-shrink:0;}
+
+  .axis-labels{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+  .axis-label-group label{display:block;font-size:10px;color:var(--muted);
+    font-family:var(--font-mono);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase;}
+
+  /* Checkbox row */
+  .check-row{display:flex;align-items:center;gap:10px;padding:8px 0;min-height:var(--touch-sm);}
+  .check-row label{font-size:14px;color:var(--muted);cursor:pointer;flex:1;}
+
+  .errbar-mode{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px;}
+  .errbar-mode-btn{padding:8px 14px;border-radius:20px;border:1px solid var(--border);
+    background:transparent;color:var(--muted);font-family:var(--font-mono);
+    font-size:12px;cursor:pointer;min-height:var(--touch-sm);display:flex;align-items:center;}
+  .errbar-mode-btn.active{border-color:var(--accent3);color:var(--accent3);background:rgba(252,129,129,.1);}
+  .errx-mode-btn.active{border-color:var(--accent4);color:var(--accent4);background:rgba(144,205,244,.1);}
+
+  /* Data table */
+  .data-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .data-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:13px;}
+  .data-table th{background:#12151f;color:var(--muted);font-size:10px;letter-spacing:1px;
+    text-transform:uppercase;padding:8px 6px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;}
+  .data-table td{padding:2px 3px;border-bottom:1px solid #1a1f2e;}
+  .data-table td:first-child{color:var(--muted);font-size:11px;text-align:center;width:26px;}
+  .data-table input{background:transparent;border:1px solid transparent;border-radius:5px;
+    width:100%;padding:8px 4px;text-align:center;font-size:14px;font-family:var(--font-mono);
+    min-height:44px;}
+  .data-table tr:hover input{border-color:var(--border);}
+  .data-table input:focus{border-color:var(--accent);background:#0d101a;}
+  .data-table td.erry input{color:var(--accent3);}
+  .data-table td.errx input{color:var(--accent4);}
+  .data-table td.fx-col input{color:var(--green);}
+
+  /* Buttons */
+  .btn-row{display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);}
+  .btn{flex:1;height:var(--touch);border-radius:8px;border:1px solid var(--border);
+    background:#1e2436;color:var(--text);font-family:var(--font-sans);
+    font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;justify-content:center;}
+  .btn:active{opacity:.7;}
+  .btn.primary{background:var(--accent);color:#0f1117;border-color:var(--accent);}
+  .btn.danger{border-color:var(--accent3);}
+
+  /* Function tabs */
+  .func-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border);}
+  .func-tab{padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;
+    color:var(--muted);font-family:var(--font-mono);font-size:12px;cursor:pointer;
+    min-height:var(--touch-sm);display:flex;align-items:center;}
+  .func-tab:active{opacity:.7;}
+  .func-tab.active{background:var(--accent2);color:#0f1117;border-color:var(--accent2);font-weight:600;}
+
+  .formula-display{background:#12151f;border:1px solid var(--border);border-radius:8px;
+    padding:12px 16px;margin:0 16px 10px;font-family:var(--font-mono);font-size:15px;
+    color:var(--accent);text-align:center;}
+
+  /* PARAMETERS – big touch targets */
+  .params-section{padding:12px 16px;border-bottom:1px solid var(--border);}
+  .param-step-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+  .step-size-label{font-size:11px;color:var(--muted);font-family:var(--font-mono);}
+  .step-size-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;
+    color:var(--muted);font-family:var(--font-mono);font-size:12px;cursor:pointer;
+    min-height:var(--touch-sm);display:flex;align-items:center;}
+  .step-size-btn.active{border-color:var(--accent2);color:var(--accent2);background:rgba(246,173,85,.1);}
+
+  .param-row{display:grid;grid-template-columns:32px var(--touch-sm) 1fr var(--touch-sm) 90px;
+    align-items:center;gap:8px;margin-bottom:14px;}
+  .param-name{font-family:var(--font-mono);font-size:18px;font-weight:600;
+    color:var(--accent2);text-align:center;font-style:italic;}
+  .param-slider{-webkit-appearance:none;width:100%;height:6px;background:var(--border);
+    border-radius:3px;outline:none;cursor:pointer;}
+  .param-slider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;
+    border-radius:50%;background:var(--accent2);cursor:pointer;
+    box-shadow:0 0 8px rgba(246,173,85,.5);}
+  .param-slider::-moz-range-thumb{width:28px;height:28px;border-radius:50%;
+    background:var(--accent2);cursor:pointer;border:none;}
+  .step-btn{width:var(--touch-sm);height:var(--touch-sm);border-radius:8px;
+    border:1px solid var(--border);background:#1e2436;
+    color:var(--muted);font-size:20px;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    user-select:none;-webkit-user-select:none;flex-shrink:0;}
+  .step-btn:active{background:#2d3a55;transform:scale(.9);}
+
+  /* Chart panel */
+  .chart-controls{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--border);
+    align-items:center;flex-wrap:wrap;}
+  .toggle-btn{height:var(--touch-sm);padding:0 14px;border-radius:20px;border:1px solid var(--border);
+    background:transparent;color:var(--muted);font-family:var(--font-mono);
+    font-size:12px;cursor:pointer;display:flex;align-items:center;}
+  .toggle-btn:active{opacity:.7;}
+  .toggle-btn.active{border-color:var(--accent4);color:var(--accent4);background:rgba(144,205,244,.1);}
+  .toggle-btn.erry.active{border-color:var(--accent3);color:var(--accent3);background:rgba(252,129,129,.1);}
+  .toggle-btn.errx.active{border-color:var(--accent4);color:var(--accent4);background:rgba(144,205,244,.12);}
+  .bestfit-btn{margin-left:auto;height:var(--touch-sm);padding:0 16px;border-radius:8px;
+    border:1px solid var(--green);background:rgba(104,211,145,.1);color:var(--green);
+    font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;}
+  .bestfit-btn:active{opacity:.7;}
+
+  .chart-area{flex:1;padding:12px;min-height:0;}
+  .stats-bar{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--border);
+    background:var(--panel);flex-shrink:0;}
+  .stat-item{padding:10px 8px;border-right:1px solid var(--border);}
+  .stat-item:last-child{border-right:none;}
+  .stat-label{font-size:8px;color:var(--muted);font-family:var(--font-mono);
+    letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+  .stat-value{font-size:14px;font-weight:800;color:var(--text);font-family:var(--font-mono);}
+  .stat-value.good{color:var(--green);}.stat-value.ok{color:var(--accent2);}.stat-value.bad{color:var(--accent3);}
+  .func-preview{font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-top:2px;}
+
+  /* Modals */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;
+    align-items:flex-end;justify-content:center;} /* sheet from bottom on tablet */
+  .modal-overlay.show{display:flex;}
+  @media(min-width:600px){.modal-overlay{align-items:center;}}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:16px 16px 0 0;
+    padding:24px;width:100%;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    box-shadow:0 -16px 60px rgba(0,0,0,.5);}
+  @media(min-width:600px){.modal{border-radius:16px;width:520px;max-height:85vh;}}
+  .modal h2{font-size:18px;font-weight:800;margin-bottom:5px;color:var(--text);}
+  .modal p{font-size:12px;color:var(--muted);margin-bottom:18px;font-family:var(--font-mono);}
+  .modal-btns{display:flex;flex-direction:column;gap:10px;}
+  .modal-btn{padding:16px 18px;border-radius:10px;border:1px solid var(--border);background:#1e2436;
+    color:var(--text);text-align:left;cursor:pointer;font-family:var(--font-sans);min-height:var(--touch);}
+  .modal-btn:active{opacity:.7;}
+  .modal-btn .mbtn-title{font-size:14px;font-weight:700;margin-bottom:3px;}
+  .modal-btn .mbtn-desc{font-size:11px;color:var(--muted);font-family:var(--font-mono);}
+  .modal-btn.green{border-color:var(--green);}.modal-btn.green .mbtn-title{color:var(--green);}
+  .modal-btn.orange{border-color:var(--accent2);}.modal-btn.orange .mbtn-title{color:var(--accent2);}
+  .modal-btn.blue{border-color:var(--accent4);}.modal-btn.blue .mbtn-title{color:var(--accent4);}
+  .modal-close{margin-top:12px;width:100%;height:var(--touch);border-radius:8px;
+    border:1px solid var(--border);background:transparent;color:var(--muted);
+    font-family:var(--font-sans);font-size:14px;cursor:pointer;}
+
+  .sub-opt{margin-top:8px;padding:10px 12px;background:#12151f;border-radius:8px;border:1px solid var(--border);}
+  .sub-opt label{font-size:11px;color:var(--muted);font-family:var(--font-mono);margin-bottom:5px;display:block;}
+
+  /* Import modal */
+  .import-modal{width:100%;}
+  @media(min-width:600px){.import-modal{width:580px;}}
+  .drop-zone{border:2px dashed var(--border);border-radius:12px;padding:28px 16px;text-align:center;
+    cursor:pointer;margin-bottom:12px;position:relative;}
+  .drop-zone:active{border-color:var(--accent);background:rgba(79,209,197,.06);}
+  .drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .drop-zone .dz-icon{font-size:36px;margin-bottom:8px;}
+  .drop-zone .dz-text{font-size:14px;color:var(--muted);font-family:var(--font-mono);}
+  .drop-zone .dz-sub{font-size:11px;color:#4a5568;margin-top:5px;font-family:var(--font-mono);}
+  .paste-area{width:100%;height:120px;background:#0d101a;border:1px solid var(--border);border-radius:10px;
+    color:var(--text);font-family:var(--font-mono);font-size:13px;padding:10px 12px;
+    resize:vertical;outline:none;}
+  .paste-area:focus{border-color:var(--accent);}
+  .import-col-map{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
+  .col-map-group label{display:block;font-size:10px;color:var(--muted);font-family:var(--font-mono);
+    letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+  .col-map-group select{font-size:14px;padding:10px 12px;border-radius:8px;}
+  .import-preview{background:#0d101a;border:1px solid var(--border);border-radius:8px;
+    max-height:160px;overflow-y:auto;margin:8px 0;}
+  .import-preview table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:11px;}
+  .import-preview th{background:#12151f;color:var(--accent);padding:6px 10px;text-align:left;position:sticky;top:0;}
+  .import-preview td{padding:5px 10px;border-bottom:1px solid #1a1f2e;color:var(--muted);}
+  .import-status{font-size:12px;font-family:var(--font-mono);padding:8px 12px;border-radius:8px;margin-bottom:10px;}
+  .import-status.ok{background:rgba(104,211,145,.1);color:var(--green);border:1px solid rgba(104,211,145,.3);}
+  .import-status.err{background:rgba(252,129,129,.1);color:var(--accent3);border:1px solid rgba(252,129,129,.3);}
+  .import-tabs{display:flex;gap:1px;margin-bottom:14px;background:var(--border);border-radius:9px;padding:3px;}
+  .import-tab{flex:1;padding:10px;text-align:center;border-radius:7px;cursor:pointer;
+    font-family:var(--font-mono);font-size:13px;color:var(--muted);}
+  .import-tab.active{background:var(--panel);color:var(--text);font-weight:600;}
+  .import-panel{display:none;}.import-panel.active{display:block;}
+  .sep-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+  .sep-btn{padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;
+    color:var(--muted);font-family:var(--font-mono);font-size:12px;cursor:pointer;
+    min-height:var(--touch-sm);display:flex;align-items:center;}
+  .sep-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(79,209,197,.1);}
+  .custom-fn-input{font-size:15px !important;padding:10px 12px !important;border-radius:8px !important;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">mess<span>werte</span>.auswertung</div>
+    <div class="logo-sub">Physik &amp; Mathematik · Bayern · Tablet</div>
+  </div>
+  <div class="export-bar">
+    <button class="exp-btn imp" onclick="showImportModal()">⬆</button>
+    <button class="exp-btn" onclick="exportCSV()">CSV</button>
+    <button class="exp-btn" onclick="exportPDF()">PDF</button>
+    <button class="exp-btn" onclick="showExportModal()">📋</button>
+  </div>
+</header>
+
+<!-- Tab bar for portrait mode -->
+<div class="tab-bar">
+  <div class="tab active" id="tabData" onclick="switchTab('data')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    Daten
+  </div>
+  <div class="tab" id="tabModel" onclick="switchTab('model')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Modell
+  </div>
+  <div class="tab" id="tabChart" onclick="switchTab('chart')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Diagramm
+  </div>
+</div>
+
+<!-- Scrim for data slide-over in landscape -->
+<div class="data-scrim" onclick="closeDataPanel()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:59;"></div>
+
+<div class="main">
+
+  <!-- ═══════════════ DATA PANEL ═══════════════ -->
+  <div class="panel active" id="pData">
+
+    <!-- Achsen & Fehlerbalken -->
+    <div class="section">
+      <div class="section-title">Achsen &amp; Fehlerbalken</div>
+      <div class="axis-labels">
+        <div class="axis-label-group">
+          <label>x-Achse</label>
+          <input type="text" id="xLabel" value="Zeit t [s]">
+        </div>
+        <div class="axis-label-group">
+          <label>y-Achse</label>
+          <input type="text" id="yLabel" value="Strecke s [m]">
+        </div>
+      </div>
+
+      <!-- Y-Fehlerbalken -->
+      <div class="check-row">
+        <input type="checkbox" id="showErrY" onchange="toggleErrY()">
+        <label for="showErrY" style="color:var(--accent3);">±Δy Fehlerbalken</label>
+      </div>
+      <div id="errYOptions" style="display:none;">
+        <div class="errbar-mode">
+          <button class="errbar-mode-btn active" id="modeY_col" onclick="setErrYMode('col')">Spalte (±Δy)</button>
+          <button class="errbar-mode-btn" id="modeY_fixed" onclick="setErrYMode('fixed')">Fest (±)</button>
+          <button class="errbar-mode-btn" id="modeY_pct" onclick="setErrYMode('pct')">Prozent (%)</button>
+        </div>
+        <div id="errYFixedWrap" style="display:none;" class="sub-opt">
+          <label>Fester Fehler ±Δy</label>
+          <input type="number" id="errYFixed" value="0.1" step="0.01" min="0" oninput="updateChart()" style="width:110px;">
+        </div>
+        <div id="errYPctWrap" style="display:none;" class="sub-opt">
+          <label>Fehler in %</label>
+          <input type="number" id="errYPct" value="5" step="0.5" min="0" max="100" oninput="updateChart()" style="width:110px;">
+        </div>
+      </div>
+
+      <!-- X-Fehlerbalken -->
+      <div class="check-row" style="margin-top:4px;">
+        <input type="checkbox" id="showErrX" onchange="toggleErrX()">
+        <label for="showErrX" style="color:var(--accent4);">±Δx Fehlerbalken</label>
+      </div>
+      <div id="errXOptions" style="display:none;">
+        <div class="errbar-mode">
+          <button class="errbar-mode-btn errx-mode-btn active" id="modeX_col" onclick="setErrXMode('col')">Spalte (±Δx)</button>
+          <button class="errbar-mode-btn errx-mode-btn" id="modeX_fixed" onclick="setErrXMode('fixed')">Fest (±)</button>
+          <button class="errbar-mode-btn errx-mode-btn" id="modeX_pct" onclick="setErrXMode('pct')">Prozent (%)</button>
+        </div>
+        <div id="errXFixedWrap" style="display:none;" class="sub-opt">
+          <label>Fester Fehler ±Δx</label>
+          <input type="number" id="errXFixed" value="0.05" step="0.005" min="0" oninput="updateChart()" style="width:110px;">
+        </div>
+        <div id="errXPctWrap" style="display:none;" class="sub-opt">
+          <label>Fehler in %</label>
+          <input type="number" id="errXPct" value="5" step="0.5" min="0" max="100" oninput="updateChart()" style="width:110px;">
+        </div>
+      </div>
+
+      <!-- f(x) Spalte -->
+      <div class="check-row" style="margin-top:4px;">
+        <input type="checkbox" id="showFxCol" onchange="toggleFxCol()">
+        <label for="showFxCol" style="color:var(--green);">f(x)-Spalte in Tabelle</label>
+      </div>
+    </div>
+
+    <!-- Messwert-Tabelle -->
+    <div class="section">
+      <div class="section-title">Messwerte</div>
+      <div class="data-table-wrap">
+        <table class="data-table" id="dataTable">
+          <thead>
+            <tr id="tableHead">
+              <th>#</th>
+              <th id="thX">x</th>
+              <th id="thDX" style="color:var(--accent4);display:none;">±Δx</th>
+              <th id="thY">y</th>
+              <th id="thDY" style="color:var(--accent3);display:none;">±Δy</th>
+              <th id="thFX" style="color:var(--green);display:none;">f(x)</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="addRow()">+ Zeile</button>
+      <button class="btn danger" onclick="clearData()">Leeren</button>
+      <button class="btn primary" onclick="updateChart()">↻</button>
+    </div><!-- end btn-row -->
+
+  </div><!-- end pData -->
+
+  <!-- ═══════════════ MODEL PANEL ═══════════════ -->
+  <div class="panel" id="pModel">
+
+    <!-- Modellfunktion -->
+    <div class="section" style="padding-bottom:6px;">
+      <div class="section-title">Modellfunktion</div>
+      <div class="func-tabs">
+        <button class="func-tab active" onclick="setFunc('linear',event)">Linear</button>
+        <button class="func-tab" onclick="setFunc('quadratic',event)">Quadratisch</button>
+        <button class="func-tab" onclick="setFunc('cubic',event)">Kubisch</button>
+        <button class="func-tab" onclick="setFunc('sqrt',event)">Wurzel</button>
+        <button class="func-tab" onclick="setFunc('exp',event)">Exponential</button>
+        <button class="func-tab" onclick="setFunc('log',event)">Logarithmus</button>
+        <button class="func-tab" onclick="setFunc('power',event)">Potenz</button>
+        <button class="func-tab" onclick="setFunc('sine',event)">Sinus</button>
+        <button class="func-tab" onclick="setFunc('inverse',event)">1/x</button>
+        <button class="func-tab" onclick="setFunc('invSq',event)">1/x²</button>
+        <button class="func-tab" onclick="setFunc('custom',event)" style="border-color:var(--accent);color:var(--accent);">✏ Eigene</button>
+      </div>
+    </div>
+
+    <div class="formula-display" id="formulaDisplay">f(x) = a·x + b</div>
+
+    <!-- Custom function editor (shown only when 'custom' is selected) -->
+    <div id="customFnPanel" style="display:none; padding:0 13px 10px;">
+      <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">
+        f(x) = &nbsp;<span style="color:var(--accent);">JavaScript-Ausdruck</span> mit x, a, b, c
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="customFnInput" value="a * Math.sin(b * x) + c"
+          placeholder="z.B. a*x*x + b*Math.exp(c*x)"
+          style="flex:1;font-family:var(--font-mono);font-size:12px;border-color:var(--accent);"
+          oninput="onCustomFnInput(this.value)"
+          onkeydown="if(event.key==='Enter')applyCustomFn()">
+        <button onclick="applyCustomFn()" style="padding:5px 12px;border-radius:6px;border:1px solid var(--accent);
+          background:rgba(79,209,197,.15);color:var(--accent);font-family:var(--font-sans);
+          font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">↵ OK</button>
+      </div>
+      <div id="customFnStatus" style="font-size:10px;margin-top:4px;font-family:var(--font-mono);color:var(--green);">✓ Funktion gültig</div>
+      <div style="margin-top:6px;font-size:10px;color:var(--muted);font-family:var(--font-mono);line-height:1.6;">
+        Erlaubt: <span style="color:var(--accent2);">Math.sin · Math.cos · Math.exp · Math.log · Math.sqrt · Math.pow · Math.abs</span>
+      </div>
+    </div>
+    <div class="params-section" id="paramsSection"></div>
+
+  </div><!-- end pModel -->
+  <div class="panel" id="pChart">
+    <div class="chart-controls">
+      <button class="toggle-btn active" id="btnCurve" onclick="toggleLayer('curve')">Kurve</button>
+      <button class="toggle-btn active" id="btnPoints" onclick="toggleLayer('points')">Messpunkte</button>
+      <button class="toggle-btn erry" id="btnErrY" onclick="toggleLayer('errY')" style="display:none">±Δy</button>
+      <button class="toggle-btn errx" id="btnErrX" onclick="toggleLayer('errX')" style="display:none">±Δx</button>
+      <button class="toggle-btn" id="btnResiduals" onclick="toggleLayer('residuals')">Residuen</button>
+      <button class="bestfit-btn" onclick="autoFit()">⚡ Auto-Fit</button>
+    </div>
+    <div class="chart-area">
+      <canvas id="myChart"></canvas>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-label">Datenpunkte</div>
+        <div class="stat-value" id="statN">—</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">R² Bestimmtheitsmaß</div>
+        <div class="stat-value" id="statR2">—</div>
+        <div class="func-preview" id="statFit">Modell anpassen</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">RMSE</div>
+        <div class="stat-value" id="statRMSE">—</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Chi² / n</div>
+        <div class="stat-value" id="statChi">—</div>
+        <div class="func-preview" id="statChiInfo">nur mit ±Δy</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Parameter</div>
+        <div class="stat-value" style="font-size:10px;" id="statFunc">—</div>
+      </div>
+    </div>
+  </div><!-- end pChart -->
+
+</div><!-- end main -->
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal" onclick="if(event.target===this)closeImportModal()">
+  <div class="modal import-modal">
+    <h2>📥 Messwerte importieren</h2>
+    <p>CSV · TSV · Excel-Kopieren · Manuell einfügen</p>
+
+    <!-- Tabs -->
+    <div class="import-tabs">
+      <div class="import-tab active" onclick="switchImportTab('file')">📂 Datei</div>
+      <div class="import-tab" onclick="switchImportTab('paste')">📋 Einfügen</div>
+    </div>
+
+    <!-- FILE TAB -->
+    <div class="import-panel active" id="ipFile">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".csv,.tsv,.txt,.xlsx,.xls" onchange="onFileSelected(this)">
+        <div class="dz-icon">📂</div>
+        <div class="dz-text">Datei hier ablegen oder klicken</div>
+        <div class="dz-sub">CSV · TSV · TXT · XLSX · XLS</div>
+      </div>
+    </div>
+
+    <!-- PASTE TAB -->
+    <div class="import-panel" id="ipPaste">
+      <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);margin-bottom:5px;">
+        Werte direkt aus Excel/Calc einfügen (Strg+V) oder manuell eingeben:
+      </div>
+      <textarea class="paste-area" id="pasteArea"
+        placeholder="x&#9;y&#10;0.0&#9;0.00&#10;0.2&#9;0.20&#10;..."
+        oninput="onPasteInput(this.value)"></textarea>
+    </div>
+
+    <!-- Separator selector (file tab only) -->
+    <div id="sepRow" style="margin-bottom:8px;">
+      <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);margin-bottom:4px;">TRENNZEICHEN</div>
+      <div class="sep-row">
+        <button class="sep-btn active" id="sep_auto" onclick="setSep('auto')">Auto</button>
+        <button class="sep-btn" id="sep_comma" onclick="setSep('comma')">, Komma</button>
+        <button class="sep-btn" id="sep_semi" onclick="setSep('semi')">; Semikolon</button>
+        <button class="sep-btn" id="sep_tab" onclick="setSep('tab')">⇥ Tab</button>
+        <button class="sep-btn" id="sep_space" onclick="setSep('space')">␣ Leerzeichen</button>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div id="importStatus" style="display:none;" class="import-status ok"></div>
+
+    <!-- Preview -->
+    <div id="previewWrap" style="display:none;">
+      <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);margin-bottom:4px;">VORSCHAU (erste 5 Zeilen)</div>
+      <div class="import-preview"><table id="previewTable"></table></div>
+
+      <!-- Column mapping -->
+      <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);margin:8px 0 4px;">SPALTEN ZUORDNEN</div>
+      <div class="import-col-map">
+        <div class="col-map-group"><label>x</label><select id="mapX"></select></div>
+        <div class="col-map-group"><label>±Δx</label><select id="mapDX"></select></div>
+        <div class="col-map-group"><label>y</label><select id="mapY"></select></div>
+        <div class="col-map-group"><label>±Δy</label><select id="mapDY"></select></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+        <input type="checkbox" id="hasHeader" checked onchange="reparseImport()">
+        <label for="hasHeader" style="font-size:11px;color:var(--muted);cursor:pointer;font-family:var(--font-mono);">Erste Zeile = Kopfzeile</label>
+        <span style="margin-left:auto;font-size:10px;color:var(--muted);font-family:var(--font-mono);" id="rowCountLabel"></span>
+      </div>
+    </div>
+
+    <div class="modal-btns" style="margin-top:12px;">
+      <button class="modal-btn green" id="importConfirmBtn" style="display:none;" onclick="confirmImport()">
+        <div class="mbtn-title">✓ Importieren</div>
+        <div class="mbtn-desc" id="importConfirmDesc">Daten werden in die Tabelle übernommen</div>
+      </button>
+    </div>
+    <button class="modal-close" onclick="closeImportModal()">Abbrechen</button>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="exportModal" onclick="if(event.target===this)closeExportModal()">
+  <div class="modal">
+    <h2>Auswertung exportieren</h2>
+    <p>Wähle das gewünschte Format</p>
+    <div class="modal-btns">
+      <button class="modal-btn green" onclick="exportCSV();closeExportModal()">
+        <div class="mbtn-title">📄 CSV-Tabelle</div>
+        <div class="mbtn-desc">Messwerte + Fehler als .csv · Excel / LibreOffice</div>
+      </button>
+      <button class="modal-btn orange" onclick="exportPDF();closeExportModal()">
+        <div class="mbtn-title">🖨 PDF / Drucken</div>
+        <div class="mbtn-desc">Druckoptimierter Bericht · Strg+P → Als PDF speichern</div>
+      </button>
+      <button class="modal-btn blue" onclick="exportReport();closeExportModal()">
+        <div class="mbtn-title">📋 HTML-Bericht</div>
+        <div class="mbtn-desc">Vollständiger Bericht als .html · offline nutzbar</div>
+      </button>
+    </div>
+    <button class="modal-close" onclick="closeExportModal()">Abbrechen</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+let chartInstance = null;
+let showCurve=true, showPoints=true, showResiduals=false, showErrY=false, showErrX=false;
+let errYEnabled=false, errXEnabled=false, fxColEnabled=false;
+let errYMode='col', errXMode='col';
+
+// ── FUNCTIONS ──────────────────────────────────────────────────
+const FUNCTIONS = {
+  linear:    {label:'f(x) = a·x + b',              params:['a','b'],        defaults:[1,0],      f:(x,p)=>p[0]*x+p[1]},
+  quadratic: {label:'f(x) = a·x² + b·x + c',       params:['a','b','c'],   defaults:[1,0,0],    f:(x,p)=>p[0]*x*x+p[1]*x+p[2]},
+  cubic:     {label:'f(x) = a·x³ + b·x² + c·x + d',params:['a','b','c','d'],defaults:[1,0,0,0], f:(x,p)=>p[0]*x**3+p[1]*x**2+p[2]*x+p[3]},
+  sqrt:      {label:'f(x) = a·√x + b',              params:['a','b'],        defaults:[1,0],      f:(x,p)=>p[0]*Math.sqrt(Math.abs(x))+p[1]},
+  exp:       {label:'f(x) = a·eᵇˣ + c',            params:['a','b','c'],   defaults:[1,.5,0],   f:(x,p)=>p[0]*Math.exp(p[1]*x)+p[2]},
+  log:       {label:'f(x) = a·ln(x) + b',           params:['a','b'],        defaults:[1,0],      f:(x,p)=>p[0]*Math.log(Math.abs(x)+1e-9)+p[1]},
+  power:     {label:'f(x) = a·xᵇ',                 params:['a','b'],        defaults:[1,2],      f:(x,p)=>p[0]*Math.pow(Math.abs(x),p[1])},
+  sine:      {label:'f(x) = a·sin(b·x + c) + d',   params:['a','b','c','d'],defaults:[1,1,0,0], f:(x,p)=>p[0]*Math.sin(p[1]*x+p[2])+p[3]},
+  inverse:   {label:'f(x) = a / x + b',             params:['a','b'],        defaults:[1,0],      f:(x,p)=>p[0]/(x||1e-9)+p[1]},
+  invSq:     {label:'f(x) = a / x² + b',            params:['a','b'],        defaults:[1,0],      f:(x,p)=>p[0]/((x||1e-9)**2)+p[1]},
+  custom:    {label:'Eigene Funktion',               params:['a','b','c'],   defaults:[1,0,0],    f:(x,p)=>evalCustom(x,p)},
+};
+let currentFunc='linear', params={};
+let customFnSource = 'a * Math.sin(b * x) + c';
+let customFnCompiled = null;
+
+function evalCustom(x, p) {
+  if (!customFnCompiled) return NaN;
+  try { return customFnCompiled(x, p[0], p[1], p[2]); }
+  catch(e) { return NaN; }
+}
+
+function compileCustom(src) {
+  try {
+    // eslint-disable-next-line no-new-func
+    customFnCompiled = new Function('x','a','b','c', '"use strict"; return ' + src + ';');
+    // quick smoke test
+    const test = customFnCompiled(1, 1, 1, 1);
+    if (!isFinite(test) && !isNaN(test)) throw new Error('bad');
+    return true;
+  } catch(e) {
+    customFnCompiled = null;
+    return false;
+  }
+}
+
+// ── DEMO DATA ──────────────────────────────────────────────────
+// Freier Fall: s = ½·g·t² mit g≈9.81
+const DEMO=[
+  [0.0,0.00,0.02,0.05],[0.2,0.20,0.02,0.04],[0.4,0.79,0.02,0.06],
+  [0.6,1.77,0.02,0.08],[0.8,3.14,0.02,0.07],[1.0,4.91,0.02,0.09],
+  [1.2,7.07,0.02,0.10],[1.4,9.60,0.02,0.11]
+]; // [x, y, errX, errY]
+
+// ── TABLE ──────────────────────────────────────────────────────
+function initTable(n=8){
+  document.getElementById('tableBody').innerHTML='';
+  for(let i=0;i<n;i++){
+    const [xv,yv,exv,eyv]=i<DEMO.length?DEMO[i]:['','','',''];
+    addRowWithValues(i+1,xv,yv,exv,eyv);
+  }
+  updateFxColumn();
+}
+
+function addRowWithValues(num,xv='',yv='',exv='',eyv=''){
+  const body=document.getElementById('tableBody');
+  const row=body.insertRow();
+  row.innerHTML=`<td>${num}</td>
+    <td><input type="number" step="any" value="${xv}" oninput="liveUpdate()" class="x-input"></td>
+    <td class="errx" style="display:none"><input type="number" step="any" value="${exv}" oninput="liveUpdate()" class="errx-input" placeholder="±Δx"></td>
+    <td><input type="number" step="any" value="${yv}" oninput="liveUpdate()" class="y-input"></td>
+    <td class="erry" style="display:none"><input type="number" step="any" value="${eyv}" oninput="liveUpdate()" class="erry-input" placeholder="±Δy"></td>
+    <td class="fx-col" style="display:none"><input type="number" readonly tabindex="-1" class="fx-output" placeholder="—" style="color:var(--green);cursor:default;"></td>`;
+}
+
+function addRow(){
+  const n=document.querySelectorAll('#tableBody tr').length+1;
+  addRowWithValues(n);
+  syncColVisibility();
+  renumberRows();
+}
+
+function renumberRows(){
+  document.querySelectorAll('#tableBody tr').forEach((r,i)=>{r.cells[0].textContent=i+1;});
+}
+
+function clearData(){
+  if(confirm('Alle Messwerte löschen?')){initTable(8);updateChart();}
+}
+
+function getDataPoints(){
+  const pts=[];
+  const rows=document.querySelectorAll('#tableBody tr');
+  rows.forEach(row=>{
+    const x=parseFloat(row.querySelector('.x-input').value);
+    const y=parseFloat(row.querySelector('.y-input').value);
+    const ex=parseFloat(row.querySelector('.errx-input').value);
+    const ey=parseFloat(row.querySelector('.erry-input').value);
+    if(!isNaN(x)&&!isNaN(y)) pts.push({x,y,errX:isNaN(ex)?null:ex,errY:isNaN(ey)?null:ey});
+  });
+  pts.sort((a,b)=>a.x-b.x);
+  return pts;
+}
+
+function getErrY(pt){
+  if(!errYEnabled) return 0;
+  if(errYMode==='col') return pt.errY??0;
+  if(errYMode==='fixed') return parseFloat(document.getElementById('errYFixed').value)||0;
+  if(errYMode==='pct') return Math.abs(pt.y)*(parseFloat(document.getElementById('errYPct').value)||0)/100;
+  return 0;
+}
+
+function getErrX(pt){
+  if(!errXEnabled) return 0;
+  if(errXMode==='col') return pt.errX??0;
+  if(errXMode==='fixed') return parseFloat(document.getElementById('errXFixed').value)||0;
+  if(errXMode==='pct') return Math.abs(pt.x)*(parseFloat(document.getElementById('errXPct').value)||0)/100;
+  return 0;
+}
+
+// ── COLUMN VISIBILITY ──────────────────────────────────────────
+function syncColVisibility(){
+  // Header
+  document.getElementById('thDX').style.display=errXEnabled?'':'none';
+  document.getElementById('thDY').style.display=errYEnabled?'':'none';
+  document.getElementById('thFX').style.display=fxColEnabled?'':'none';
+  // Rows
+  document.querySelectorAll('#tableBody tr').forEach(row=>{
+    row.querySelector('td.errx').style.display=errXEnabled?'':'none';
+    row.querySelector('td.erry').style.display=errYEnabled?'':'none';
+    row.querySelector('td.fx-col').style.display=fxColEnabled?'':'none';
+  });
+}
+
+function updateFxColumn(){
+  if(!fxColEnabled) return;
+  const fd=FUNCTIONS[currentFunc];
+  const pVals=fd.params.map(p=>params[p]??0);
+  document.querySelectorAll('#tableBody tr').forEach(row=>{
+    const x=parseFloat(row.querySelector('.x-input').value);
+    const inp=row.querySelector('.fx-output');
+    if(!isNaN(x)&&inp) inp.value=isFinite(fd.f(x,pVals))?fd.f(x,pVals).toFixed(4):'';
+  });
+}
+
+// ── UI TOGGLES ─────────────────────────────────────────────────
+function toggleErrY(){
+  errYEnabled=document.getElementById('showErrY').checked;
+  document.getElementById('errYOptions').style.display=errYEnabled?'block':'none';
+  const btn=document.getElementById('btnErrY');
+  btn.style.display=errYEnabled?'':'none';
+  if(errYEnabled){showErrY=true;btn.classList.add('active');}
+  syncColVisibility(); updateChart();
+}
+
+function toggleErrX(){
+  errXEnabled=document.getElementById('showErrX').checked;
+  document.getElementById('errXOptions').style.display=errXEnabled?'block':'none';
+  const btn=document.getElementById('btnErrX');
+  btn.style.display=errXEnabled?'':'none';
+  if(errXEnabled){showErrX=true;btn.classList.add('active');}
+  syncColVisibility(); updateChart();
+}
+
+function toggleFxCol(){
+  fxColEnabled=document.getElementById('showFxCol').checked;
+  syncColVisibility(); updateFxColumn();
+}
+
+function setErrYMode(m){
+  errYMode=m;
+  document.querySelectorAll('[id^="modeY_"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('modeY_'+m).classList.add('active');
+  document.getElementById('errYFixedWrap').style.display=m==='fixed'?'block':'none';
+  document.getElementById('errYPctWrap').style.display=m==='pct'?'block':'none';
+  updateChart();
+}
+
+function setErrXMode(m){
+  errXMode=m;
+  document.querySelectorAll('[id^="modeX_"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('modeX_'+m).classList.add('active');
+  document.getElementById('errXFixedWrap').style.display=m==='fixed'?'block':'none';
+  document.getElementById('errXPctWrap').style.display=m==='pct'?'block':'none';
+  updateChart();
+}
+
+// ── FUNCTION SELECTOR ──────────────────────────────────────────
+function setFunc(name,evt){
+  currentFunc=name;
+  document.querySelectorAll('.func-tab').forEach(b=>b.classList.remove('active'));
+  if(evt) evt.target.classList.add('active');
+  const fd=FUNCTIONS[name];
+  fd.params.forEach((p,i)=>{if(params[p]===undefined)params[p]=fd.defaults[i];});
+
+  const isCustom = name==='custom';
+  document.getElementById('customFnPanel').style.display = isCustom ? 'block' : 'none';
+
+  if(isCustom){
+    compileCustom(customFnSource);
+    document.getElementById('formulaDisplay').textContent = 'f(x) = ' + customFnSource;
+  } else {
+    document.getElementById('formulaDisplay').textContent = fd.label;
+  }
+  renderParams(); updateChart();
+}
+
+function onCustomFnInput(val){
+  customFnSource = val;
+  // live feedback while typing, but don't update chart on every keystroke
+  const ok = compileCustom(val);
+  const status = document.getElementById('customFnStatus');
+  if(ok){
+    status.textContent='✓ Funktion gültig'; status.style.color='var(--green)';
+  } else {
+    status.textContent='✗ Syntaxfehler'; status.style.color='var(--accent3)';
+  }
+}
+
+function applyCustomFn(){
+  const src = document.getElementById('customFnInput').value.trim();
+  customFnSource = src;
+  const ok = compileCustom(src);
+  const status = document.getElementById('customFnStatus');
+  if(ok){
+    status.textContent='✓ Übernommen'; status.style.color='var(--green)';
+    document.getElementById('formulaDisplay').textContent = 'f(x) = ' + src;
+    updateChart();
+  } else {
+    status.textContent='✗ Syntaxfehler – Funktion nicht übernommen'; status.style.color='var(--accent3)';
+  }
+}
+
+// ── PARAMETERS ─────────────────────────────────────────────────
+let paramStep = 0.1; // global step size for ± buttons
+
+function renderParams(){
+  const fd=FUNCTIONS[currentFunc];
+  const sec=document.getElementById('paramsSection');
+  const colors=['#f6ad55','#4fd1c5','#fc8181','#90cdf4'];
+
+  // Step-size selector row
+  const steps = [0.001, 0.01, 0.1, 1, 10];
+  const stepBtns = steps.map(s =>
+    `<button class="step-size-btn${paramStep===s?' active':''}" onclick="setParamStep(${s})">${s}</button>`
+  ).join('');
+
+  sec.innerHTML=`<div class="section-title">Parameter</div>
+    <div class="param-step-row">
+      <span class="step-size-label">Schrittweite:</span>${stepBtns}
+    </div>`;
+
+  fd.params.forEach((p,i)=>{
+    if(params[p]===undefined) params[p]=fd.defaults[i];
+    const val=params[p];
+    const mn=Math.min(val*3,-10), mx=Math.max(val*3,10);
+    // Use onmousedown/ontouchstart for repeat-on-hold
+    sec.innerHTML+=`
+      <div class="param-row">
+        <div class="param-name" style="color:${colors[i]}">${p}</div>
+        <button class="step-btn" id="stepMinus_${p}"
+          onmousedown="startStep('${p}',-1)" onmouseup="stopStep()" onmouseleave="stopStep()"
+          ontouchstart="startStep('${p}',-1)" ontouchend="stopStep()"
+          style="color:${colors[i]};border-color:${colors[i]}33;">−</button>
+        <input type="range" class="param-slider" id="slider_${p}"
+          min="${mn<mx?mn:-10}" max="${mn<mx?mx:10}" step="${paramStep}" value="${val}"
+          oninput="onSlider('${p}',this.value)" style="accent-color:${colors[i]}">
+        <button class="step-btn" id="stepPlus_${p}"
+          onmousedown="startStep('${p}',+1)" onmouseup="stopStep()" onmouseleave="stopStep()"
+          ontouchstart="startStep('${p}',+1)" ontouchend="stopStep()"
+          style="color:${colors[i]};border-color:${colors[i]}33;">+</button>
+        <input type="number" id="val_${p}" value="${val.toFixed(4)}" step="${paramStep}"
+          oninput="onValInput('${p}',this.value)"
+          style="color:${colors[i]};background:transparent;border:1px solid #252a3a;border-radius:4px;
+                 width:72px;padding:3px 4px;font-family:var(--font-mono);font-size:11px;">
+      </div>`;
+  });
+}
+
+let _stepTimer = null;
+function startStep(p, dir) {
+  doStep(p, dir);
+  _stepTimer = setTimeout(() => {
+    _stepTimer = setInterval(() => doStep(p, dir), 80);
+  }, 350);
+}
+function stopStep() {
+  clearTimeout(_stepTimer); clearInterval(_stepTimer); _stepTimer = null;
+}
+function doStep(p, dir) {
+  const newVal = (params[p] ?? 0) + dir * paramStep;
+  params[p] = Math.round(newVal / paramStep) * paramStep; // avoid float drift
+  const sl = document.getElementById('slider_'+p);
+  const inp = document.getElementById('val_'+p);
+  if(sl) {
+    if(params[p] < parseFloat(sl.min)) sl.min = params[p];
+    if(params[p] > parseFloat(sl.max)) sl.max = params[p];
+    sl.value = params[p];
+  }
+  if(inp) inp.value = params[p].toFixed(4);
+  updateChart();
+}
+function setParamStep(s) {
+  paramStep = s;
+  // update active button without full re-render
+  document.querySelectorAll('.step-size-btn').forEach(b => {
+    b.classList.toggle('active', parseFloat(b.textContent) === s);
+  });
+  // update slider steps
+  document.querySelectorAll('.param-slider').forEach(sl => sl.step = s);
+  document.querySelectorAll('[id^="val_"]').forEach(inp => inp.step = s);
+}
+
+function onSlider(p,val){
+  params[p]=parseFloat(val);
+  const inp=document.getElementById('val_'+p);
+  if(inp) inp.value=parseFloat(val).toFixed(4);
+  updateChart();
+}
+
+function onValInput(p,val){
+  const v=parseFloat(val);
+  if(!isNaN(v)){
+    params[p]=v;
+    const sl=document.getElementById('slider_'+p);
+    if(sl){
+      if(v<parseFloat(sl.min)) sl.min=v;
+      if(v>parseFloat(sl.max)) sl.max=v;
+      sl.value=v;
+    }
+    updateChart();
+  }
+}
+
+// ── ERROR BAR PLUGIN ───────────────────────────────────────────
+const errorBarPlugin={
+  id:'errorBars',
+  afterDatasetsDraw(chart){
+    if(!errYEnabled&&!errXEnabled) return;
+    const ctx=chart.ctx;
+    const pts=getDataPoints();
+    const dsIdx=chart.data.datasets.findIndex(d=>d.label==='Messwerte');
+    if(dsIdx<0) return;
+    const meta=chart.getDatasetMeta(dsIdx);
+    if(!meta||!meta.data) return;
+
+    ctx.save();
+    const capW=5;
+
+    pts.forEach((pt,i)=>{
+      const el=meta.data[i];
+      if(!el) return;
+      const xPx=el.x, yPx=el.y;
+
+      // ── Y error bars (red)
+      if(showErrY&&errYEnabled){
+        const ey=getErrY(pt);
+        if(ey>0){
+          const yTop=chart.scales.y.getPixelForValue(pt.y+ey);
+          const yBot=chart.scales.y.getPixelForValue(pt.y-ey);
+          ctx.strokeStyle='rgba(252,129,129,0.9)';
+          ctx.lineWidth=1.5;
+          ctx.beginPath();
+          ctx.moveTo(xPx,yTop); ctx.lineTo(xPx,yBot); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(xPx-capW,yTop); ctx.lineTo(xPx+capW,yTop);
+          ctx.moveTo(xPx-capW,yBot); ctx.lineTo(xPx+capW,yBot);
+          ctx.stroke();
+        }
+      }
+
+      // ── X error bars (blue)
+      if(showErrX&&errXEnabled){
+        const ex=getErrX(pt);
+        if(ex>0){
+          const xLeft=chart.scales.x.getPixelForValue(pt.x-ex);
+          const xRight=chart.scales.x.getPixelForValue(pt.x+ex);
+          ctx.strokeStyle='rgba(144,205,244,0.9)';
+          ctx.lineWidth=1.5;
+          ctx.beginPath();
+          ctx.moveTo(xLeft,yPx); ctx.lineTo(xRight,yPx); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(xLeft,yPx-capW); ctx.lineTo(xLeft,yPx+capW);
+          ctx.moveTo(xRight,yPx-capW); ctx.lineTo(xRight,yPx+capW);
+          ctx.stroke();
+        }
+      }
+    });
+    ctx.restore();
+  }
+};
+Chart.register(errorBarPlugin);
+
+// ── CHART ──────────────────────────────────────────────────────
+function updateChart(){
+  const pts=getDataPoints();
+  const fd=FUNCTIONS[currentFunc];
+  const pVals=fd.params.map(p=>params[p]??0);
+
+  const xs=pts.map(p=>p.x);
+  const xMin=xs.length?Math.min(...xs):0;
+  const xMax=xs.length?Math.max(...xs):10;
+  const range=xMax-xMin||1;
+
+  const curveData=[];
+  for(let i=0;i<=300;i++){
+    const x=xMin-range*.05+(range*1.1)*i/300;
+    const y=fd.f(x,pVals);
+    if(isFinite(y)) curveData.push({x,y});
+  }
+  const residualData=pts.map(p=>({x:p.x,y:p.y-fd.f(p.x,pVals)}));
+
+  // Stats
+  const n=pts.length;
+  document.getElementById('statN').textContent=n;
+  let rmseVal=0;
+  if(n>1){
+    const yMean=pts.reduce((s,p)=>s+p.y,0)/n;
+    const ssTot=pts.reduce((s,p)=>s+(p.y-yMean)**2,0);
+    const ssRes=pts.reduce((s,p)=>s+(p.y-fd.f(p.x,pVals))**2,0);
+    const r2=1-ssRes/ssTot;
+    rmseVal=Math.sqrt(ssRes/n);
+    const el=document.getElementById('statR2');
+    el.textContent=r2.toFixed(4);
+    el.className='stat-value '+(r2>.99?'good':r2>.95?'ok':'bad');
+    document.getElementById('statRMSE').textContent=rmseVal.toFixed(4);
+    document.getElementById('statFit').textContent=r2>.99?'✓ Sehr gut':r2>.95?'~ Gut':'✗ Verbessern';
+
+    if(errYEnabled){
+      const ptsE=pts.filter(p=>getErrY(p)>0);
+      if(ptsE.length>0){
+        const chi2=ptsE.reduce((s,p)=>s+((p.y-fd.f(p.x,pVals))/getErrY(p))**2,0);
+        const cv=chi2/ptsE.length;
+        const chiEl=document.getElementById('statChi');
+        chiEl.textContent=cv.toFixed(3);
+        chiEl.className='stat-value '+(cv<1.5?'good':cv<3?'ok':'bad');
+        document.getElementById('statChiInfo').textContent=cv<1.5?'✓ Gutes Modell':cv<3?'~ Akzeptabel':'✗ Schlechte Anp.';
+      }
+    } else {
+      document.getElementById('statChi').textContent='—';
+      document.getElementById('statChiInfo').textContent='nur mit ±Δy';
+    }
+  } else {
+    ['statR2','statRMSE','statChi'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('statFit').textContent='Mehr Punkte nötig';
+    document.getElementById('statChiInfo').textContent='nur mit ±Δy';
+  }
+  document.getElementById('statFunc').textContent=fd.params.map(p=>`${p}=${(params[p]??0).toFixed(3)}`).join('  ');
+
+  // Update f(x) column
+  updateFxColumn();
+
+  const datasets=[];
+  if(showCurve) datasets.push({label:'Modellfunktion',data:curveData,type:'line',
+    borderColor:'#f6ad55',backgroundColor:'rgba(246,173,85,.06)',borderWidth:2.5,pointRadius:0,tension:0,order:2});
+  if(showPoints) datasets.push({label:'Messwerte',data:pts,type:'scatter',
+    backgroundColor:'#4fd1c5',borderColor:'#81e6d9',pointRadius:7,pointHoverRadius:10,borderWidth:2,order:1});
+  if(showResiduals) datasets.push({label:'Residuen',data:residualData,type:'bar',
+    backgroundColor:residualData.map(d=>d.y>=0?'rgba(104,211,145,.5)':'rgba(252,129,129,.5)'),
+    borderColor:residualData.map(d=>d.y>=0?'#68d391':'#fc8181'),borderWidth:1,order:3,yAxisID:'residY'});
+
+  const xLbl=document.getElementById('xLabel').value||'x';
+  const yLbl=document.getElementById('yLabel').value||'y';
+
+  const cfg={
+    type:'scatter',data:{datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:150},
+      interaction:{mode:'nearest',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#718096',font:{family:'ui-monospace',size:12},boxWidth:16}},
+        tooltip:{
+          backgroundColor:'#181c27',borderColor:'#252a3a',borderWidth:1,
+          titleColor:'#4fd1c5',bodyColor:'#e2e8f0',bodyFont:{family:'ui-monospace'},
+          callbacks:{label:ctx=>{
+            const base=`(${ctx.parsed.x.toFixed(3)}, ${ctx.parsed.y.toFixed(3)})`;
+            if(ctx.dataset.label==='Messwerte'){
+              const pt=pts.find(p=>p.x===ctx.parsed.x);
+              if(!pt) return base;
+              let s=base;
+              const ey=getErrY(pt), ex=getErrX(pt);
+              if(errYEnabled&&ey>0) s+=`  ±Δy=${ey.toFixed(3)}`;
+              if(errXEnabled&&ex>0) s+=`  ±Δx=${ex.toFixed(3)}`;
+              return s;
+            }
+            return base;
+          }}
+        }
+      },
+      scales:{
+        x:{type:'linear',title:{display:true,text:xLbl,color:'#718096',font:{family:'-apple-system',size:13}},
+          grid:{color:'#1a1f2e'},ticks:{color:'#718096',font:{family:'ui-monospace',size:11}}},
+        y:{type:'linear',title:{display:true,text:yLbl,color:'#718096',font:{family:'-apple-system',size:13}},
+          grid:{color:'#1a1f2e'},ticks:{color:'#718096',font:{family:'ui-monospace',size:11}}},
+        ...(showResiduals?{residY:{type:'linear',position:'right',
+          title:{display:true,text:'Residuen',color:'#718096'},
+          grid:{drawOnChartArea:false},ticks:{color:'#718096',font:{family:'ui-monospace',size:11}}}}:{})
+      }
+    }
+  };
+
+  const canvas=document.getElementById('myChart');
+  if(chartInstance) chartInstance.destroy();
+  chartInstance=new Chart(canvas,cfg);
+}
+
+// ── LAYERS ─────────────────────────────────────────────────────
+function toggleLayer(name){
+  const map={curve:'btnCurve',points:'btnPoints',residuals:'btnResiduals',errY:'btnErrY',errX:'btnErrX'};
+  if(name==='curve') showCurve=!showCurve;
+  if(name==='points') showPoints=!showPoints;
+  if(name==='residuals') showResiduals=!showResiduals;
+  if(name==='errY') showErrY=!showErrY;
+  if(name==='errX') showErrX=!showErrX;
+  document.getElementById(map[name]).classList.toggle('active');
+  updateChart();
+}
+
+// ── AUTO-FIT ───────────────────────────────────────────────────
+function autoFit(){
+  const pts=getDataPoints();
+  if(pts.length<2){alert('Mindestens 2 Datenpunkte nötig!');return;}
+  const fd=FUNCTIONS[currentFunc];
+  function cost(pArr){
+    return pts.reduce((s,p)=>{
+      const diff=p.y-fd.f(p.x,pArr);
+      const ey=getErrY(p);
+      const w=(errYEnabled&&ey>0)?1/ey**2:1;
+      return s+w*diff*diff;
+    },0);
+  }
+  let pArr=fd.params.map(p=>params[p]??fd.defaults[fd.params.indexOf(p)]);
+  let lr=0.001,bestCost=cost(pArr);
+  for(let iter=0;iter<8000;iter++){
+    const grad=pArr.map((_,i)=>{
+      const dp=Math.max(Math.abs(pArr[i])*.001,1e-6);
+      const p1=[...pArr];p1[i]+=dp;
+      const p2=[...pArr];p2[i]-=dp;
+      return(cost(p1)-cost(p2))/(2*dp);
+    });
+    const norm=Math.sqrt(grad.reduce((s,g)=>s+g*g,0))||1;
+    const cand=pArr.map((v,i)=>v-lr*grad[i]/norm);
+    const c=cost(cand);
+    if(c<bestCost){pArr=cand;bestCost=c;lr*=1.05;}
+    else lr*=0.7;
+    if(lr<1e-12) break;
+  }
+  fd.params.forEach((p,i)=>{params[p]=pArr[i];});
+  renderParams(); updateChart();
+}
+
+// ── HELPERS ────────────────────────────────────────────────────
+function buildReportData(){
+  const pts=getDataPoints();
+  const fd=FUNCTIONS[currentFunc];
+  const pVals=fd.params.map(p=>params[p]??0);
+  const xLbl=document.getElementById('xLabel').value||'x';
+  const yLbl=document.getElementById('yLabel').value||'y';
+  const n=pts.length;
+  const yMean=n?pts.reduce((s,p)=>s+p.y,0)/n:0;
+  const ssTot=pts.reduce((s,p)=>s+(p.y-yMean)**2,0);
+  const ssRes=pts.reduce((s,p)=>s+(p.y-fd.f(p.x,pVals))**2,0);
+  const r2=n>1?(1-ssRes/ssTot):null;
+  const rmse=n>1?Math.sqrt(ssRes/n):null;
+  let chi2=null;
+  if(errYEnabled&&n>1){
+    const ptsE=pts.filter(p=>getErrY(p)>0);
+    if(ptsE.length>0) chi2=ptsE.reduce((s,p)=>s+((p.y-fd.f(p.x,pVals))/getErrY(p))**2,0)/ptsE.length;
+  }
+  const chartImg=chartInstance?document.getElementById('myChart').toDataURL('image/png'):'';
+  return{pts,fd,pVals,xLbl,yLbl,n,r2,rmse,chi2,chartImg};
+}
+
+function buildReportHTML(d,forPDF=false){
+  const {pts,fd,pVals,xLbl,yLbl,n,r2,rmse,chi2,chartImg}=d;
+  const paramBadges=fd.params.map(p=>`<span class="pbadge">${p} = ${(params[p]??0).toFixed(6)}</span>`).join('');
+  const tRows=pts.map(p=>{
+    const fx=fd.f(p.x,pVals);
+    const res=p.y-fx;
+    const flag=rmse&&Math.abs(res)>rmse*2;
+    let row=`<tr><td>${p.x}</td>`;
+    if(errXEnabled) row+=`<td class="err">${getErrX(p).toFixed(4)}</td>`;
+    row+=`<td>${p.y}</td>`;
+    if(errYEnabled) row+=`<td class="err">${getErrY(p).toFixed(4)}</td>`;
+    row+=`<td class="fx">${fx.toFixed(4)}</td><td class="${flag?'bad':'good'}">${res.toFixed(4)}</td></tr>`;
+    return row;
+  }).join('');
+  let thRow=`<tr><th>${xLbl}</th>`;
+  if(errXEnabled) thRow+=`<th>±Δx</th>`;
+  thRow+=`<th>${yLbl}</th>`;
+  if(errYEnabled) thRow+=`<th>±Δy</th>`;
+  thRow+=`<th>f(x)</th><th>Residuum</th></tr>`;
+
+  return '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">'
+    + '<title>Auswertungsbericht<\/title>'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0;}'
+    + 'body{font-family:-apple-system,Arial,sans-serif;max-width:820px;margin:0 auto;padding:28px 32px;color:#1a202c;font-size:14px;}'
+    + 'h1{font-size:22px;color:#1a365d;border-bottom:3px solid #4fd1c5;padding-bottom:8px;margin-bottom:6px;}'
+    + '.meta-line{font-size:12px;color:#718096;margin-bottom:20px;}'
+    + 'h2{font-size:13px;color:#2d3748;margin:22px 0 8px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;}'
+    + '.formula{background:#ebf8ff;border:1px solid #90cdf4;border-radius:6px;padding:11px 16px;font-family:monospace;font-size:16px;color:#2b6cb0;margin-bottom:10px;}'
+    + '.params{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}'
+    + '.pbadge{background:#fffaf0;border:1px solid #f6ad55;border-radius:5px;padding:5px 12px;font-family:monospace;font-size:13px;color:#c05621;}'
+    + '.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}'
+    + '.stat-box{background:#f7fafc;border:1px solid #e2e8f0;border-radius:7px;padding:10px 14px;}'
+    + '.stat-box .slabel{font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:1px;}'
+    + '.stat-box .sval{font-size:19px;font-weight:800;color:#2d3748;font-family:monospace;margin-top:2px;}'
+    + '.stat-box .sval.good{color:#276749;} .stat-box .sval.ok{color:#c05621;} .stat-box .sval.bad{color:#c53030;}'
+    + 'img.chart{width:100%;border:1px solid #e2e8f0;border-radius:7px;margin-bottom:16px;}'
+    + 'table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;}'
+    + 'th{background:#2d3748;color:#fff;padding:7px 10px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;}'
+    + 'td{padding:5px 10px;border-bottom:1px solid #e2e8f0;font-family:monospace;}'
+    + 'tr:nth-child(even) td{background:#f7fafc;}'
+    + 'td.err{color:#c53030;} td.fx{color:#276749;font-weight:600;} td.good{color:#276749;} td.bad{color:#c53030;font-weight:700;}'
+    + '.footer{margin-top:24px;color:#a0aec0;font-size:10px;border-top:1px solid #e2e8f0;padding-top:10px;}'
+    + '@media print{body{margin:0;padding:16px 20px;max-width:100%;} h1{font-size:18px;} .no-print{display:none!important;} @page{size:A4;margin:15mm;}}'
+    + '<\/style><\/head><body>'
+    + (forPDF ? '<div class="no-print" style="background:#fefcbf;border:1px solid #d69e2e;border-radius:6px;padding:10px 16px;margin-bottom:16px;font-size:13px;"><strong>PDF erstellen:<\/strong> Strg+P (oder Cmd+P) \u2192 Ziel: \u201eAls PDF speichern\u201c \u00b7 Layout: Hochformat \u00b7 Hintergrundgrafiken: \u2713<\/div>' : '')
+    + '<h1>\uD83D\uDCCA Auswertungsbericht<\/h1>'
+    + '<div class="meta-line">' + new Date().toLocaleString('de-DE') + ' \u00b7 ' + xLbl + ' \u2192 ' + yLbl + ' \u00b7 Modell: ' + fd.label + '<\/div>'
+    + '<h2>Modellfunktion<\/h2>'
+    + '<div class="formula">' + fd.label + '<\/div>'
+    + '<div class="params">' + paramBadges + '<\/div>'
+    + '<h2>Statistische Kenngr\u00f6\u00dfen<\/h2>'
+    + '<div class="stats-grid">'
+    + '<div class="stat-box"><div class="slabel">Datenpunkte n<\/div><div class="sval">' + n + '<\/div><\/div>'
+    + '<div class="stat-box"><div class="slabel">R\u00b2<\/div><div class="sval ' + (r2===null?'':r2>.99?'good':r2>.95?'ok':'bad') + '">' + (r2===null?'\u2014':r2.toFixed(4)) + '<\/div><\/div>'
+    + '<div class="stat-box"><div class="slabel">RMSE<\/div><div class="sval">' + (rmse===null?'\u2014':rmse.toFixed(4)) + '<\/div><\/div>'
+    + '<div class="stat-box"><div class="slabel">\u03c7\u00b2\/n<\/div><div class="sval ' + (chi2===null?'':chi2<1.5?'good':chi2<3?'ok':'bad') + '">' + (chi2===null?'\u2014':chi2.toFixed(3)) + '<\/div><\/div>'
+    + '<\/div>'
+    + '<h2>Diagramm<\/h2>'
+    + (chartImg ? '<img class="chart" src="' + chartImg + '" alt="Diagramm">' : '<p>Kein Diagramm verf\u00fcgbar<\/p>')
+    + '<h2>Messtabelle<\/h2>'
+    + '<table><thead>' + thRow + '<\/thead><tbody>' + tRows + '<\/tbody><\/table>'
+    + '<div class="footer">Erstellt mit Messwerteauswertung \u00b7 Gymnasium Bayern<\/div>'
+    + '<\/body><\/html>';
+}
+
+// ── EXPORT: CSV ────────────────────────────────────────────────
+function exportCSV(){
+  const pts=getDataPoints();
+  const fd=FUNCTIONS[currentFunc];
+  const pVals=fd.params.map(p=>params[p]??0);
+  const xLbl=document.getElementById('xLabel').value||'x';
+  const yLbl=document.getElementById('yLabel').value||'y';
+  let csv=`Messwerteauswertung\nDatum: ${new Date().toLocaleDateString('de-DE')}\nModell: ${fd.label}\n`;
+  csv+=fd.params.map(p=>`${p} = ${(params[p]??0).toFixed(6)}`).join('; ')+'\n\n';
+  let header=`"${xLbl}"`;
+  if(errXEnabled) header+=`;"±Δx"`;
+  header+=`;"${yLbl}"`;
+  if(errYEnabled) header+=`;"±Δy"`;
+  header+=`;"f(x)";"Residuum"`;
+  csv+=header+'\n';
+  pts.forEach(p=>{
+    const fx=fd.f(p.x,pVals);
+    let row=`${p.x}`;
+    if(errXEnabled) row+=`;${getErrX(p).toFixed(6)}`;
+    row+=`;${p.y}`;
+    if(errYEnabled) row+=`;${getErrY(p).toFixed(6)}`;
+    row+=`;${fx.toFixed(6)};${(p.y-fx).toFixed(6)}`;
+    csv+=row+'\n';
+  });
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='messwerte.csv'; a.click();
+}
+
+// ── EXPORT: PDF ────────────────────────────────────────────────
+function exportPDF(){
+  const d=buildReportData();
+  const html=buildReportHTML(d,true);
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  // Auto-trigger print after chart image loads
+  win.onload=()=>setTimeout(()=>win.print(),400);
+}
+
+// ── EXPORT: HTML Report ────────────────────────────────────────
+function exportReport(){
+  const d=buildReportData();
+  const html=buildReportHTML(d,false);
+  const blob=new Blob([html],{type:'text/html;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='auswertungsbericht.html'; a.click();
+}
+
+// ── IMPORT ────────────────────────────────────────────────────
+let importSep = 'auto';
+let importParsed = null; // { headers:[], rows:[[]] }
+let importTab = 'file';
+
+function showImportModal() {
+  resetImportModal();
+  document.getElementById('importModal').classList.add('show');
+}
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('show');
+}
+
+function switchImportTab(tab) {
+  importTab = tab;
+  document.querySelectorAll('.import-tab').forEach((t,i) => {
+    t.classList.toggle('active', ['file','paste'][i] === tab);
+  });
+  document.getElementById('ipFile').classList.toggle('active', tab==='file');
+  document.getElementById('ipPaste').classList.toggle('active', tab==='paste');
+  document.getElementById('sepRow').style.display = tab==='file' ? '' : 'none';
+  resetImportState();
+}
+
+function resetImportState() {
+  importParsed = null;
+  document.getElementById('importStatus').style.display = 'none';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('importConfirmBtn').style.display = 'none';
+}
+
+function resetImportModal() {
+  resetImportState();
+  document.getElementById('fileInput').value = '';
+  document.getElementById('pasteArea').value = '';
+  setSep('auto');
+}
+
+function setSep(s) {
+  importSep = s;
+  document.querySelectorAll('.sep-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sep_'+s).classList.add('active');
+  if(importParsed) reparseImport();
+}
+
+function detectSep(text) {
+  const counts = {
+    ',': (text.match(/,/g)||[]).length,
+    ';': (text.match(/;/g)||[]).length,
+    '\t': (text.match(/\t/g)||[]).length,
+    ' ': (text.match(/ +/g)||[]).length,
+  };
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+function getSepChar() {
+  if(importSep==='auto') return null; // detect per-file
+  if(importSep==='comma') return ',';
+  if(importSep==='semi') return ';';
+  if(importSep==='tab') return '\t';
+  if(importSep==='space') return ' ';
+  return null;
+}
+
+function parseDelimited(text) {
+  const sep = getSepChar() || detectSep(text);
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if(lines.length === 0) return null;
+
+  // Parse rows – handle quoted fields
+  function parseLine(line) {
+    if(!line.includes('"')) {
+      return line.split(sep === ' ' ? /\s+/ : sep).map(s => s.trim());
+    }
+    const result = [];
+    let cur = '', inQ = false;
+    for(let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if(c === '"') { inQ = !inQ; continue; }
+      if(c === sep && !inQ) { result.push(cur.trim()); cur = ''; continue; }
+      cur += c;
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  const rows = lines.map(parseLine);
+  // Normalize row length to max
+  const maxLen = Math.max(...rows.map(r => r.length));
+  rows.forEach(r => { while(r.length < maxLen) r.push(''); });
+  return { sep, rows };
+}
+
+function inferHeaders(rows) {
+  const first = rows[0];
+  // Is first row a header? Check if it has non-numeric values
+  const hasHeader = document.getElementById('hasHeader') ?
+    document.getElementById('hasHeader').checked : true;
+  if(hasHeader && first.some(v => isNaN(parseFloat(v.replace(',','.'))) && v.trim() !== '')) {
+    return { headers: first, dataRows: rows.slice(1) };
+  }
+  // Auto-generate headers: col0, col1, ...
+  return { headers: first.map((_,i) => 'Spalte '+(i+1)), dataRows: rows };
+}
+
+function showImportStatus(msg, ok) {
+  const el = document.getElementById('importStatus');
+  el.textContent = msg; el.style.display = '';
+  el.className = 'import-status ' + (ok ? 'ok' : 'err');
+}
+
+function showPreview(headers, dataRows) {
+  // Col map dropdowns
+  const maps = ['mapX','mapDX','mapY','mapDY'];
+  const defaults = [0, -1, 1, -1]; // -1 = (keine)
+  maps.forEach((id, mi) => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="-1">(keine)</option>';
+    headers.forEach((h, i) => {
+      sel.innerHTML += `<option value="${i}">${h||('Sp.'+(i+1))}</option>`;
+    });
+    // Smart default: try to match names
+    let def = defaults[mi];
+    if(mi===0) def = headers.findIndex(h => /^x|^t|^zeit|^time/i.test(h.trim()));
+    if(mi===2) def = headers.findIndex(h => /^y|^s |^strecke|^v |^value|^messwert/i.test(h.trim()));
+    if(mi===1) def = headers.findIndex(h => /delta.*x|err.*x|dx|±x|\+.*x/i.test(h.trim()));
+    if(mi===3) def = headers.findIndex(h => /delta.*y|err.*y|dy|±y|\+.*y/i.test(h.trim()));
+    if(def >= 0) sel.value = String(def);
+    else sel.value = String(defaults[mi]);
+    sel.onchange = () => updatePreviewHighlight();
+  });
+  // If only 1 col found, default y to col 0 too... just use smart logic above
+
+  // Preview table
+  const previewRows = dataRows.slice(0, 5);
+  const tbl = document.getElementById('previewTable');
+  tbl.innerHTML = `<thead><tr>${headers.map(h=>`<th>${h||'?'}</th>`).join('')}</tr></thead>
+    <tbody>${previewRows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+
+  document.getElementById('rowCountLabel').textContent = `${dataRows.length} Datenpunkte`;
+  document.getElementById('previewWrap').style.display = '';
+  document.getElementById('importConfirmBtn').style.display = '';
+  document.getElementById('importConfirmDesc').textContent = `${dataRows.length} Zeilen übernehmen`;
+}
+
+function reparseImport() {
+  if(!importParsed) return;
+  const {headers, dataRows} = inferHeaders(importParsed.rows);
+  showPreview(headers, dataRows);
+}
+
+function updatePreviewHighlight() {} // placeholder for future highlighting
+
+// ── File input
+function onFileSelected(input) {
+  const file = input.files[0];
+  if(!file) return;
+
+  // XLSX support via SheetJS CDN
+  if(file.name.match(/\.xlsx?$/i)) {
+    loadSheetJS(() => readXLSX(file));
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => processTextImport(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function loadSheetJS(cb) {
+  if(window.XLSX) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function readXLSX(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const csv = XLSX.utils.sheet_to_csv(ws);
+      processTextImport(csv);
+    } catch(err) {
+      showImportStatus('✗ XLSX konnte nicht gelesen werden: '+err.message, false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function processTextImport(text) {
+  // Normalize decimal comma → dot
+  text = text.replace(/(\d),(\d)/g, '$1.$2');
+  const parsed = parseDelimited(text);
+  if(!parsed || parsed.rows.length < 2) {
+    showImportStatus('✗ Keine verwertbaren Daten gefunden', false);
+    return;
+  }
+  importParsed = parsed;
+  const {headers, dataRows} = inferHeaders(parsed.rows);
+  showImportStatus(`✓ ${dataRows.length} Zeilen erkannt · Trennzeichen: "${parsed.sep==='\t'?'Tab':parsed.sep}"`, true);
+  showPreview(headers, dataRows);
+}
+
+// ── Paste input
+function onPasteInput(text) {
+  if(!text.trim()) { resetImportState(); return; }
+  text = text.replace(/(\d),(\d)/g, '$1.$2');
+  const parsed = parseDelimited(text);
+  if(!parsed || parsed.rows.length < 1) {
+    showImportStatus('✗ Kein verwertbarer Inhalt', false);
+    return;
+  }
+  importParsed = parsed;
+  const {headers, dataRows} = inferHeaders(parsed.rows);
+  showImportStatus(`✓ ${dataRows.length} Zeilen erkannt`, true);
+  showPreview(headers, dataRows);
+}
+
+// ── Confirm import
+function confirmImport() {
+  if(!importParsed) return;
+  const {headers, dataRows} = inferHeaders(importParsed.rows);
+
+  const iX  = parseInt(document.getElementById('mapX').value);
+  const iDX = parseInt(document.getElementById('mapDX').value);
+  const iY  = parseInt(document.getElementById('mapY').value);
+  const iDY = parseInt(document.getElementById('mapDY').value);
+
+  if(iX < 0 || iY < 0) {
+    showImportStatus('✗ Bitte x- und y-Spalte auswählen', false);
+    return;
+  }
+
+  const pts = [];
+  dataRows.forEach(row => {
+    const x = parseFloat(row[iX]);
+    const y = parseFloat(row[iY]);
+    if(isNaN(x) || isNaN(y)) return;
+    const dx = iDX >= 0 ? parseFloat(row[iDX]) : NaN;
+    const dy = iDY >= 0 ? parseFloat(row[iDY]) : NaN;
+    pts.push({x, y, errX: isNaN(dx)?null:dx, errY: isNaN(dy)?null:dy});
+  });
+
+  if(pts.length === 0) {
+    showImportStatus('✗ Keine numerischen Zeilen gefunden', false);
+    return;
+  }
+
+  // Populate table
+  document.getElementById('tableBody').innerHTML = '';
+  pts.forEach((p, i) => {
+    addRowWithValues(i+1, p.x, p.y,
+      p.errX !== null ? p.errX : '',
+      p.errY !== null ? p.errY : '');
+  });
+  syncColVisibility();
+  renumberRows();
+  closeImportModal();
+  updateChart();
+}
+
+// ── Drag & Drop
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('dropZone');
+  if(!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if(!file) return;
+    if(file.name.match(/\.xlsx?$/i)) { loadSheetJS(() => readXLSX(file)); return; }
+    const reader = new FileReader();
+    reader.onload = ev => processTextImport(ev.target.result);
+    reader.readAsText(file, 'UTF-8');
+  });
+});
+
+// ── MODAL ──────────────────────────────────────────────────────
+function showExportModal(){document.getElementById('exportModal').classList.add('show');}
+function closeExportModal(){document.getElementById('exportModal').classList.remove('show');}
+
+// ── TABLET TAB SWITCHER ────────────────────────────────────────
+function isLandscape() {
+  return window.matchMedia('(orientation:landscape) and (min-width:700px)').matches;
+}
+
+function openDataPanel() {
+  document.body.classList.add('data-open');
+  document.getElementById('tabData').classList.add('active');
+}
+function closeDataPanel() {
+  document.body.classList.remove('data-open');
+  document.getElementById('tabData').classList.remove('active');
+}
+
+function switchTab(tab) {
+  if (isLandscape()) {
+    // In landscape only the Daten tab is tappable – it toggles a slide-over
+    if (tab === 'data') {
+      document.body.classList.contains('data-open') ? closeDataPanel() : openDataPanel();
+    }
+    return;
+  }
+
+  // Portrait: normal three-tab switching
+  closeDataPanel(); // clear any leftover state
+  ['data','model','chart'].forEach(t => {
+    const tabEl   = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    const panelEl = document.getElementById('p'   + t.charAt(0).toUpperCase() + t.slice(1));
+    if (tabEl)   tabEl.classList.toggle('active',   t === tab);
+    if (panelEl) panelEl.classList.toggle('active', t === tab);
+  });
+
+  if (tab === 'chart' && chartInstance) {
+    setTimeout(() => chartInstance.resize(), 60);
+  }
+}
+
+// Re-evaluate on orientation change
+window.addEventListener('resize', () => {
+  if (isLandscape()) {
+    // Make sure model+chart panels are visible, close data slide-over
+    closeDataPanel();
+    ['data','model','chart'].forEach(t => {
+      const p = document.getElementById('p' + t.charAt(0).toUpperCase() + t.slice(1));
+      if (p) p.classList.remove('active');
+    });
+  } else {
+    // Back to portrait – activate data tab by default
+    closeDataPanel();
+    switchTab('data');
+  }
+  if (chartInstance) setTimeout(() => chartInstance.resize(), 100);
+});
+
+// ── INIT ───────────────────────────────────────────────────────
+function liveUpdate(){updateChart();}
+document.getElementById('xLabel').addEventListener('input',updateChart);
+document.getElementById('yLabel').addEventListener('input',updateChart);
+
+params={a:4.9,b:0,c:0,d:0};
+compileCustom(customFnSource);
+initTable(8);
+renderParams();
+updateChart();
+</script>
+</body>
+</html>
